@@ -110,10 +110,20 @@ public class StudentService {
 
     public void graduate(String facultyNumber) {
         Student student = getActiveStudent(facultyNumber);
+        SystemData db = fileManager.getSystemData();
+        Specialty specialty = db.findSpecialty(student.getProgram());
 
         for (Grade g : student.getGrades()) {
             if (!g.isPassed()) {
                 throw new StudentException("Студентът не е положил всички записани изпити. Неположен: " + g.getDisciplineName() + ".");
+            }
+        }
+
+        if (specialty != null && specialty.getMinElectiveCredits() > 0) {
+            int earned = calculateElectiveCredits(student, specialty);
+            if (earned < specialty.getMinElectiveCredits()) {
+                throw new StudentException("Недостатъчно кредити от избираеми дисциплини. Необходими: "
+                        + specialty.getMinElectiveCredits() + ", събрани: " + earned + ".");
             }
         }
 
@@ -262,6 +272,8 @@ public class StudentService {
 
     public void report(String facultyNumber) {
         Student s = getStudentByFn(facultyNumber);
+        SystemData db = fileManager.getSystemData();
+        Specialty specialty = db.findSpecialty(s.getProgram());
 
         System.out.println("Академична справка за: " + s.getName() + " (" + s.getFacultyNumber() + ")");
         System.out.println("Специалност: " + s.getProgram() + " | Курс: " + s.getYear() + " | Група: " + s.getGroup());
@@ -287,6 +299,16 @@ public class StudentService {
         System.out.println("--------------------------------------------------");
         System.out.printf("Среден успех (с незавършени): %.2f%n", s.calculateAverage(true));
         System.out.printf("Среден успех (само положени): %.2f%n", s.calculateAverage(false));
+
+        if (specialty != null && specialty.getMinElectiveCredits() > 0) {
+            int earned = calculateElectiveCredits(s, specialty);
+            int remaining = Math.max(0, specialty.getMinElectiveCredits() - earned);
+            System.out.println("--------------------------------------------------");
+            System.out.println("Кредити от избираеми дисциплини:");
+            System.out.println("  Събрани  : " + earned);
+            System.out.println("  Необходими: " + specialty.getMinElectiveCredits());
+            System.out.println("  Оставащи : " + remaining);
+        }
     }
 
     private Student getActiveStudent(String facultyNumber) {
@@ -313,4 +335,17 @@ public class StudentService {
             throw new StudentException("Невалиден курс: " + value);
         }
     }
+
+    private int calculateElectiveCredits(Student student, Specialty specialty) {
+        int total = 0;
+        for (Grade g : student.getPassedGrades()) {
+            Discipline d = specialty.findDiscipline(g.getDisciplineName());
+            if (d != null && d.isElective()) {
+                total += d.getCredits();
+            }
+        }
+        return total;
+    }
+
+
 }
