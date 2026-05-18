@@ -2,7 +2,10 @@ package studentsystem.service;
 
 import studentsystem.exception.StudentException;
 import studentsystem.model.*;
+
 import java.util.List;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
 public class StudentService {
     private final FileManager fileManager;
@@ -253,18 +256,21 @@ public class StudentService {
                 System.out.println("Протокол: " + courseName + " | " + specialty.getName() + " | Курс " + year);
                 System.out.println("--------------------------------------------------");
 
-                boolean found = false;
-                for (Student s : db.getStudents()) {
-                    if (!s.getProgram().equalsIgnoreCase(specialty.getName())) continue;
-                    Grade g = s.findGrade(courseName);
-                    if (g == null) continue;
+                List<Student> enrolled = db.getStudents().stream()
+                        .filter(s -> s.getProgram().equalsIgnoreCase(specialty.getName()))
+                        .filter(s -> s.findGrade(courseName) != null)
+                        .sorted(Comparator.comparing(Student::getFacultyNumber))
+                        .collect(Collectors.toList());
 
-                    String gradeStr = g.hasGrade() ? String.valueOf(g.getValue()) : "---";
-                    System.out.printf("%-10s %-25s %s%n", s.getFacultyNumber(), s.getName(), gradeStr);
-                    found = true;
+                if (enrolled.isEmpty()) {
+                    System.out.println("Няма записани студенти.");
+                } else {
+                    for (Student s : enrolled) {
+                        Grade g = s.findGrade(courseName);
+                        String gradeStr = g.hasGrade() ? String.valueOf(g.getValue()) : "---";
+                        System.out.printf("%-10s %-25s %s%n", s.getFacultyNumber(), s.getName(), gradeStr);
+                    }
                 }
-
-                if (!found) System.out.println("Няма записани студенти.");
                 System.out.println();
             }
         }
