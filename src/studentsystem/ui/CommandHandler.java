@@ -42,16 +42,16 @@ public class CommandHandler {
         Command command = commands.get(name);
 
         if (command == null) {
-            System.out.println("Непозната команда: " + name + ". Въведете help за списък с команди.");
+            System.out.println("Unknown command: " + name + ". Type help for a list of commands.");
             return true;
         }
 
         try {
             return command.execute(tokens);
         } catch (StudentException | FileException e) {
-            System.out.println("Грешка: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         } catch (NumberFormatException e) {
-            System.out.println("Грешка: Невалиден числов аргумент.");
+            System.out.println("Error: Invalid numeric argument.");
         }
 
         return true;

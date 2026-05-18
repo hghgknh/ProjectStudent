@@ -32,7 +32,7 @@ public class Grade {
 
     @Override
     public String toString() {
-        if (!hasGrade()) return disciplineName + ": (без оценка)";
+        if (!hasGrade()) return disciplineName + ": (no grade)";
         return disciplineName + ": " + value;
     }
 }

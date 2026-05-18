@@ -3,8 +3,8 @@ package studentsystem.service;
 import studentsystem.exception.StudentException;
 import studentsystem.model.*;
 
-import java.util.List;
 import java.util.Comparator;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class StudentService {
@@ -18,17 +18,17 @@ public class StudentService {
         SystemData db = fileManager.getSystemData();
 
         if (db.findStudent(facultyNumber) != null) {
-            throw new StudentException("Студент с факултетен номер " + facultyNumber + " вече съществува.");
+            throw new StudentException("Student with faculty number " + facultyNumber + " already exists.");
         }
 
         Specialty specialty = db.findSpecialty(program);
         if (specialty == null) {
-            throw new StudentException("Специалност '" + program + "' не съществува.");
+            throw new StudentException("Specialty '" + program + "' does not exist.");
         }
 
         Student student = new Student(facultyNumber, name, program, group, 1);
         db.addStudent(student);
-        System.out.println("Студент " + name + " е записан успешно в специалност " + program + ", група " + group + ".");
+        System.out.println("Student " + name + " successfully enrolled in specialty " + program + ", group " + group + ".");
     }
 
     public void advance(String facultyNumber) {
@@ -37,7 +37,7 @@ public class StudentService {
         Specialty specialty = db.findSpecialty(student.getProgram());
 
         if (student.getYear() >= specialty.getTotalYears()) {
-            throw new StudentException("Студентът е вече в последен курс.");
+            throw new StudentException("The student is already in the final year.");
         }
 
         List<Discipline> mandatory = specialty.getMandatoryForYear(student.getYear());
@@ -50,11 +50,11 @@ public class StudentService {
         }
 
         if (failCount > 2) {
-            throw new StudentException("Студентът не е положил успешно задължителните изпити. Неположени: " + failCount + " (позволени максимум 2).");
+            throw new StudentException("Student has not passed the mandatory exams. Failed: " + failCount + " (maximum 2 allowed).");
         }
 
         student.setYear(student.getYear() + 1);
-        System.out.println("Студент " + facultyNumber + " е преминал в курс " + student.getYear() + ".");
+        System.out.println("Student " + facultyNumber + " has advanced to year " + student.getYear() + ".");
     }
 
     public void change(String facultyNumber, String option, String value) {
@@ -64,32 +64,32 @@ public class StudentService {
         switch (option.toLowerCase()) {
             case "group":
                 student.setGroup(value);
-                System.out.println("Групата на студент " + facultyNumber + " е променена на " + value + ".");
+                System.out.println("Group of student " + facultyNumber + " changed to " + value + ".");
                 break;
 
             case "program":
                 Specialty newSpecialty = db.findSpecialty(value);
                 if (newSpecialty == null) {
-                    throw new StudentException("Специалност '" + value + "' не съществува.");
+                    throw new StudentException("Specialty '" + value + "' does not exist.");
                 }
                 for (int y = 1; y < student.getYear(); y++) {
                     List<Discipline> mandatory = newSpecialty.getMandatoryForYear(y);
                     for (Discipline d : mandatory) {
                         Grade g = student.findGrade(d.getName());
                         if (g == null || !g.isPassed()) {
-                            throw new StudentException("Студентът не е положил задължителен изпит '" + d.getName() + "' от новата специалност.");
+                            throw new StudentException("Student has not passed mandatory exam '" + d.getName() + "' from the new specialty.");
                         }
                     }
                 }
                 student.setProgram(value);
-                System.out.println("Специалността на студент " + facultyNumber + " е променена на " + value + ".");
+                System.out.println("Specialty of student " + facultyNumber + " changed to " + value + ".");
                 break;
 
             case "year":
                 int newYear = parseYear(value);
                 Specialty specialty = db.findSpecialty(student.getProgram());
                 if (newYear > student.getYear() + 1 || newYear < student.getYear()) {
-                    throw new StudentException("Може да се премине само в следващ курс.");
+                    throw new StudentException("Can only advance to the next year.");
                 }
                 if (newYear == student.getYear() + 1) {
                     List<Discipline> mandatory = specialty.getMandatoryForYear(student.getYear());
@@ -99,15 +99,15 @@ public class StudentService {
                         if (g == null || !g.isPassed()) failCount++;
                     }
                     if (failCount > 2) {
-                        throw new StudentException("Не може да се премине в следващ курс. Неположени задължителни изпити: " + failCount + ".");
+                        throw new StudentException("Cannot advance to the next year. Failed mandatory exams: " + failCount + ".");
                     }
                 }
                 student.setYear(newYear);
-                System.out.println("Курсът на студент " + facultyNumber + " е променен на " + newYear + ".");
+                System.out.println("Year of student " + facultyNumber + " changed to " + newYear + ".");
                 break;
 
             default:
-                throw new StudentException("Невалидна опция '" + option + "'. Използвайте: program, group, year.");
+                throw new StudentException("Invalid option '" + option + "'. Use: program, group, year.");
         }
     }
 
@@ -118,35 +118,35 @@ public class StudentService {
 
         for (Grade g : student.getGrades()) {
             if (!g.isPassed()) {
-                throw new StudentException("Студентът не е положил всички записани изпити. Неположен: " + g.getDisciplineName() + ".");
+                throw new StudentException("Student has not passed all enrolled exams. Failed: " + g.getDisciplineName() + ".");
             }
         }
 
         if (specialty != null && specialty.getMinElectiveCredits() > 0) {
             int earned = calculateElectiveCredits(student, specialty);
             if (earned < specialty.getMinElectiveCredits()) {
-                throw new StudentException("Недостатъчно кредити от избираеми дисциплини. Необходими: "
-                        + specialty.getMinElectiveCredits() + ", събрани: " + earned + ".");
+                throw new StudentException("Insufficient elective credits. Required: "
+                        + specialty.getMinElectiveCredits() + ", earned: " + earned + ".");
             }
         }
 
         student.setStatus(StudentStatus.GRADUATED);
-        System.out.println("Студент " + facultyNumber + " е отбелязан като завършил.");
+        System.out.println("Student " + facultyNumber + " has been marked as graduated.");
     }
 
     public void interrupt(String facultyNumber) {
         Student student = getActiveStudent(facultyNumber);
         student.setStatus(StudentStatus.INTERRUPTED);
-        System.out.println("Студент " + facultyNumber + " е маркиран като прекъснал.");
+        System.out.println("Student " + facultyNumber + " has been marked as interrupted.");
     }
 
     public void resume(String facultyNumber) {
         Student student = getStudentByFn(facultyNumber);
         if (student.getStatus() != StudentStatus.INTERRUPTED) {
-            throw new StudentException("Студент " + facultyNumber + " не е прекъснал.");
+            throw new StudentException("Student " + facultyNumber + " has not interrupted.");
         }
         student.setStatus(StudentStatus.ENROLLED);
-        System.out.println("Правата на студент " + facultyNumber + " са възстановени.");
+        System.out.println("Rights of student " + facultyNumber + " have been restored.");
     }
 
     public void enrollIn(String facultyNumber, String courseName) {
@@ -155,12 +155,12 @@ public class StudentService {
         Specialty specialty = db.findSpecialty(student.getProgram());
 
         if (specialty == null) {
-            throw new StudentException("Специалността на студента не е намерена.");
+            throw new StudentException("Student's specialty not found.");
         }
 
         Discipline discipline = specialty.findDiscipline(courseName);
         if (discipline == null) {
-            throw new StudentException("Дисциплина '" + courseName + "' не съществува в специалност " + student.getProgram() + ".");
+            throw new StudentException("Discipline '" + courseName + "' does not exist in specialty " + student.getProgram() + ".");
         }
 
         List<Discipline> currentYearDisciplines = specialty.getDisciplinesForYear(student.getYear());
@@ -176,65 +176,65 @@ public class StudentService {
         }
 
         if (!availableThisYear) {
-            throw new StudentException("Дисциплина '" + courseName + "' не може да се записва в курс " + student.getYear() + ".");
+            throw new StudentException("Discipline '" + courseName + "' cannot be enrolled in year " + student.getYear() + ".");
         }
 
         if (student.isEnrolledIn(courseName)) {
-            throw new StudentException("Студентът вече е записан в дисциплина '" + courseName + "'.");
+            throw new StudentException("Student is already enrolled in discipline '" + courseName + "'.");
         }
 
         student.addGrade(new Grade(courseName));
-        System.out.println("Студент " + facultyNumber + " е записан в дисциплина '" + courseName + "'.");
+        System.out.println("Student " + facultyNumber + " has been enrolled in discipline '" + courseName + "'.");
     }
 
     public void addGrade(String facultyNumber, String courseName, double gradeValue) {
         Student student = getActiveStudent(facultyNumber);
 
         if (gradeValue < 2.0 || gradeValue > 6.0) {
-            throw new StudentException("Невалидна оценка " + gradeValue + ". Оценката трябва да е между 2.00 и 6.00.");
+            throw new StudentException("Invalid grade " + gradeValue + ". Grade must be between 2.00 and 6.00.");
         }
 
         Grade grade = student.findGrade(courseName);
         if (grade == null) {
-            throw new StudentException("Студентът не е записан в дисциплина '" + courseName + "'.");
+            throw new StudentException("Student is not enrolled in discipline '" + courseName + "'.");
         }
 
         grade.setValue(gradeValue);
-        System.out.println("Добавена оценка " + gradeValue + " по '" + courseName + "' на студент " + facultyNumber + ".");
+        System.out.println("Added grade " + gradeValue + " for '" + courseName + "' to student " + facultyNumber + ".");
     }
 
     public void print(String facultyNumber) {
         Student s = getStudentByFn(facultyNumber);
-        System.out.println("Факултетен номер : " + s.getFacultyNumber());
-        System.out.println("Име              : " + s.getName());
-        System.out.println("Специалност      : " + s.getProgram());
-        System.out.println("Група            : " + s.getGroup());
-        System.out.println("Курс             : " + s.getYear());
-        System.out.println("Статус           : " + s.getStatus());
-        System.out.println("Среден успех     : " + s.calculateAverage(true));
+        System.out.println("Faculty number : " + s.getFacultyNumber());
+        System.out.println("Name           : " + s.getName());
+        System.out.println("Specialty      : " + s.getProgram());
+        System.out.println("Group          : " + s.getGroup());
+        System.out.println("Year           : " + s.getYear());
+        System.out.println("Status         : " + s.getStatus());
+        System.out.println("GPA            : " + s.calculateAverage(true));
     }
 
     public void printAll(String program, int year) {
         SystemData db = fileManager.getSystemData();
         Specialty specialty = db.findSpecialty(program);
         if (specialty == null) {
-            throw new StudentException("Специалност '" + program + "' не съществува.");
+            throw new StudentException("Specialty '" + program + "' does not exist.");
         }
 
-        System.out.println("Студенти в специалност " + program + ", курс " + year + ":");
+        System.out.println("Students in specialty " + program + ", year " + year + ":");
         System.out.println("--------------------------------------------------");
 
         boolean found = false;
         for (Student s : db.getStudents()) {
             if (s.getProgram().equalsIgnoreCase(program) && s.getYear() == year) {
-                System.out.printf("%-10s %-25s гр.%-5s %s%n",
+                System.out.printf("%-10s %-25s gr.%-5s %s%n",
                         s.getFacultyNumber(), s.getName(), s.getGroup(), s.getStatus());
                 found = true;
             }
         }
 
         if (!found) {
-            System.out.println("Няма студенти.");
+            System.out.println("No students found.");
         }
     }
 
@@ -253,7 +253,7 @@ public class StudentService {
                 }
                 if (!hasDiscipline) continue;
 
-                System.out.println("Протокол: " + courseName + " | " + specialty.getName() + " | Курс " + year);
+                System.out.println("Protocol: " + courseName + " | " + specialty.getName() + " | Year " + year);
                 System.out.println("--------------------------------------------------");
 
                 List<Student> enrolled = db.getStudents().stream()
@@ -263,7 +263,7 @@ public class StudentService {
                         .collect(Collectors.toList());
 
                 if (enrolled.isEmpty()) {
-                    System.out.println("Няма записани студенти.");
+                    System.out.println("No enrolled students.");
                 } else {
                     for (Student s : enrolled) {
                         Grade g = s.findGrade(courseName);
@@ -281,46 +281,46 @@ public class StudentService {
         SystemData db = fileManager.getSystemData();
         Specialty specialty = db.findSpecialty(s.getProgram());
 
-        System.out.println("Академична справка за: " + s.getName() + " (" + s.getFacultyNumber() + ")");
-        System.out.println("Специалност: " + s.getProgram() + " | Курс: " + s.getYear() + " | Група: " + s.getGroup());
+        System.out.println("Academic report for: " + s.getName() + " (" + s.getFacultyNumber() + ")");
+        System.out.println("Specialty: " + s.getProgram() + " | Year: " + s.getYear() + " | Group: " + s.getGroup());
         System.out.println("==================================================");
 
         List<Grade> passed = s.getPassedGrades();
         List<Grade> ungraded = s.getUngradedGrades();
 
         if (!passed.isEmpty()) {
-            System.out.println("Положени изпити:");
+            System.out.println("Passed exams:");
             for (Grade g : passed) {
                 System.out.printf("  %-35s %.2f%n", g.getDisciplineName(), g.getValue());
             }
         }
 
         if (!ungraded.isEmpty()) {
-            System.out.println("Незавършени дисциплини (смятат се като 2.00):");
+            System.out.println("Incomplete disciplines (counted as 2.00):");
             for (Grade g : ungraded) {
                 System.out.printf("  %-35s ---%n", g.getDisciplineName());
             }
         }
 
         System.out.println("--------------------------------------------------");
-        System.out.printf("Среден успех (с незавършени): %.2f%n", s.calculateAverage(true));
-        System.out.printf("Среден успех (само положени): %.2f%n", s.calculateAverage(false));
+        System.out.printf("GPA (with incomplete) : %.2f%n", s.calculateAverage(true));
+        System.out.printf("GPA (passed only)     : %.2f%n", s.calculateAverage(false));
 
         if (specialty != null && specialty.getMinElectiveCredits() > 0) {
             int earned = calculateElectiveCredits(s, specialty);
             int remaining = Math.max(0, specialty.getMinElectiveCredits() - earned);
             System.out.println("--------------------------------------------------");
-            System.out.println("Кредити от избираеми дисциплини:");
-            System.out.println("  Събрани  : " + earned);
-            System.out.println("  Необходими: " + specialty.getMinElectiveCredits());
-            System.out.println("  Оставащи : " + remaining);
+            System.out.println("Elective discipline credits:");
+            System.out.println("  Earned   : " + earned);
+            System.out.println("  Required : " + specialty.getMinElectiveCredits());
+            System.out.println("  Remaining: " + remaining);
         }
     }
 
     private Student getActiveStudent(String facultyNumber) {
         Student student = getStudentByFn(facultyNumber);
         if (!student.isActive()) {
-            throw new StudentException("Студент " + facultyNumber + " е прекъснал или завършил и не може да извършва тази операция.");
+            throw new StudentException("Student " + facultyNumber + " has interrupted or graduated and cannot perform this operation.");
         }
         return student;
     }
@@ -329,7 +329,7 @@ public class StudentService {
         SystemData db = fileManager.getSystemData();
         Student student = db.findStudent(facultyNumber);
         if (student == null) {
-            throw new StudentException("Студент с факултетен номер " + facultyNumber + " не е намерен.");
+            throw new StudentException("Student with faculty number " + facultyNumber + " not found.");
         }
         return student;
     }
@@ -338,7 +338,7 @@ public class StudentService {
         try {
             return Integer.parseInt(value);
         } catch (NumberFormatException e) {
-            throw new StudentException("Невалиден курс: " + value);
+            throw new StudentException("Invalid year: " + value);
         }
     }
 
@@ -352,6 +352,4 @@ public class StudentService {
         }
         return total;
     }
-
-
 }

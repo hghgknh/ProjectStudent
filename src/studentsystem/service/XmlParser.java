@@ -28,7 +28,7 @@ public class XmlParser {
             return data;
 
         } catch (Exception e) {
-            throw new FileException("Грешка при четене на файл: " + e.getMessage());
+            throw new FileException("Error reading file: " + e.getMessage());
         }
     }
 

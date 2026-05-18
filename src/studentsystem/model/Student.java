@@ -127,10 +127,12 @@ public class Student {
         return ungraded;
     }
 
-    public boolean isActive() { return status == StudentStatus.ENROLLED; }
+    public boolean isActive() {
+        return status == StudentStatus.ENROLLED;
+    }
 
     @Override
     public String toString() {
-        return facultyNumber + " - " + name + " [" + program + ", гр." + group + ", курс " + year + ", " + status + "]";
+        return facultyNumber + " - " + name + " [" + program + ", gr." + group + ", year " + year + ", " + status + "]";
     }
 }

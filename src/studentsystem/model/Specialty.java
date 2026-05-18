@@ -26,37 +26,30 @@ public class Specialty {
     }
 
     public String getName() {
-
         return name;
     }
 
     public void setName(String name) {
-
         this.name = name;
     }
 
     public int getTotalYears() {
-
         return totalYears;
     }
 
     public void setTotalYears(int totalYears) {
-
         this.totalYears = totalYears;
     }
 
     public int getMinElectiveCredits() {
-
         return minElectiveCredits;
     }
 
     public void setMinElectiveCredits(int minElectiveCredits) {
-
         this.minElectiveCredits = minElectiveCredits;
     }
 
     public Map<Integer, List<Discipline>> getDisciplinesByYear() {
-
         return disciplinesByYear;
     }
 
@@ -96,6 +89,6 @@ public class Specialty {
 
     @Override
     public String toString() {
-        return name + " (" + totalYears + " курса)";
+        return name + " (" + totalYears + " years)";
     }
 }

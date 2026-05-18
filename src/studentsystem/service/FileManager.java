@@ -15,7 +15,7 @@ public class FileManager {
 
     public void open(String filePath) {
         if (isOpen) {
-            throw new FileException("Вече има отворен файл. Затворете го първо с close.");
+            throw new FileException("A file is already open. Close it first with close.");
         }
 
         java.io.File file = new java.io.File(filePath);
@@ -23,7 +23,7 @@ public class FileManager {
             systemData = new SystemData();
             currentFilePath = filePath;
             isOpen = true;
-            System.out.println("Файлът не съществува. Създаден е нов файл: " + filePath);
+            System.out.println("File does not exist. Created new file: " + filePath);
             return;
         }
 
@@ -70,7 +70,7 @@ public class FileManager {
 
     private void requireOpenFile() {
         if (!isOpen) {
-            throw new FileException("Няма отворен файл. Използвайте open <файл>.");
+            throw new FileException("No file is open. Use open <file>.");
         }
     }
 }
