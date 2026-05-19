@@ -13,7 +13,47 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Handles reading and writing the application's XML data file.
+ *
+ * <p>The XML schema used by this parser has the following top-level structure:</p>
+ * <pre>{@code
+ * <university>
+ *   <specialties>
+ *     <specialty name="..." totalYears="..." minElectiveCredits="...">
+ *       <year number="...">
+ *         <discipline name="..." type="MANDATORY|ELECTIVE" credits="...">
+ *           <!-- optional, for electives available in multiple years -->
+ *           <availableInYears>
+ *             <year>2</year>
+ *             <year>3</year>
+ *           </availableInYears>
+ *         </discipline>
+ *       </year>
+ *     </specialty>
+ *   </specialties>
+ *   <students>
+ *     <student facultyNumber="..." name="..." program="..."
+ *              group="..." year="..." status="ENROLLED|INTERRUPTED|GRADUATED">
+ *       <grades>
+ *         <grade discipline="..." value="..."/>
+ *       </grades>
+ *     </student>
+ *   </students>
+ * </university>
+ * }</pre>
+ */
 public class XmlParser {
+
+    /**
+     * Loads a {@link SystemData} instance from the XML file at the given path.
+     * Specialties are parsed before students so that the data model is intact
+     * when student records reference specialty names.
+     *
+     * @param filePath path to the XML file
+     * @return populated {@link SystemData}
+     * @throws FileException if the file cannot be read or its XML is invalid
+     */
     public SystemData load(String filePath) {
         try {
             File file = new File(filePath);
@@ -32,6 +72,14 @@ public class XmlParser {
         }
     }
 
+    /**
+     * Serialises the given {@link SystemData} to an indented XML file at the
+     * specified path. Overwrites the file if it already exists.
+     *
+     * @param db       data to serialise
+     * @param filePath destination file path
+     * @throws FileException if the file cannot be written
+     */
     public void save(SystemData db, String filePath) {
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -59,10 +107,17 @@ public class XmlParser {
             transformer.transform(new DOMSource(doc), new StreamResult(new File(filePath)));
 
         } catch (Exception e) {
-            throw new FileException("Грешка при запис на файл: " + e.getMessage());
+            throw new FileException("Error writing file: " + e.getMessage());
         }
     }
 
+    /**
+     * Parses all {@code <specialty>} elements from the document and adds them
+     * to the given data store, including their yearly discipline lists.
+     *
+     * @param doc  parsed XML document
+     * @param db   data store to populate
+     */
     private void parseSpecialties(Document doc, SystemData db) {
         NodeList specialtyNodes = doc.getElementsByTagName("specialty");
         for (int i = 0; i < specialtyNodes.getLength(); i++) {
@@ -102,6 +157,13 @@ public class XmlParser {
         }
     }
 
+    /**
+     * Parses all {@code <student>} elements from the document and adds them
+     * to the given data store, including their grade records.
+     *
+     * @param doc  parsed XML document
+     * @param db   data store to populate
+     */
     private void parseStudents(Document doc, SystemData db) {
         NodeList studentNodes = doc.getElementsByTagName("student");
         for (int i = 0; i < studentNodes.getLength(); i++) {
@@ -127,6 +189,14 @@ public class XmlParser {
         }
     }
 
+    /**
+     * Builds the XML {@code <specialty>} element for the given specialty,
+     * including all its yearly discipline sub-elements.
+     *
+     * @param doc document used to create elements
+     * @param s   specialty to serialise
+     * @return the constructed {@code <specialty>} element
+     */
     private Element buildSpecialtyElement(Document doc, Specialty s) {
         Element el = doc.createElement("specialty");
         el.setAttribute("name", s.getName());
@@ -157,6 +227,14 @@ public class XmlParser {
         return el;
     }
 
+    /**
+     * Builds the XML {@code <student>} element for the given student,
+     * including all their grade records.
+     *
+     * @param doc document used to create elements
+     * @param s   student to serialise
+     * @return the constructed {@code <student>} element
+     */
     private Element buildStudentElement(Document doc, Student s) {
         Element el = doc.createElement("student");
         el.setAttribute("facultyNumber", s.getFacultyNumber());

@@ -1,7 +1,15 @@
 package studentsystem.ui.command;
 
+/**
+ * Handles the {@code help} command.
+ * Prints a formatted list of all supported commands and their usage to
+ * standard output.
+ */
 public class HelpCommand extends BaseCommand {
 
+    /**
+     * @param tokens no arguments required
+     */
     @Override
     public boolean execute(String[] tokens) {
         System.out.println("The following commands are supported:");

@@ -7,13 +7,42 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Contains all business logic for student management operations.
+ *
+ * <p>Every public method in this class corresponds to a user command. Each
+ * method fetches the necessary data from the {@link FileManager}, validates
+ * business rules, mutates the in-memory {@link SystemData}, and prints a
+ * confirmation or error message to standard output.</p>
+ *
+ * <p>Methods that operate on a specific student require that student to be
+ * active (status {@link studentsystem.model.StudentStatus#ENROLLED}) unless
+ * documented otherwise.</p>
+ */
 public class StudentService {
+
+    /** Source of the in-memory data for the currently open file. */
     private final FileManager fileManager;
 
+    /**
+     * Constructs a StudentService backed by the given file manager.
+     *
+     * @param fileManager manager that provides access to the open file's data
+     */
     public StudentService(FileManager fileManager) {
         this.fileManager = fileManager;
     }
 
+    /**
+     * Enrols a new student in year 1 of the given specialty and group.
+     *
+     * @param facultyNumber unique faculty number for the new student
+     * @param program       name of the specialty to enrol in
+     * @param group         study group identifier
+     * @param name          full name of the student
+     * @throws StudentException if a student with that faculty number already exists
+     * @throws StudentException if the specialty does not exist
+     */
     public void enroll(String facultyNumber, String program, String group, String name) {
         SystemData db = fileManager.getSystemData();
 
@@ -31,6 +60,16 @@ public class StudentService {
         System.out.println("Student " + name + " successfully enrolled in specialty " + program + ", group " + group + ".");
     }
 
+    /**
+     * Advances the student to the next year of study.
+     * The student must have passed all mandatory disciplines of their current
+     * year, with at most 2 failures allowed.
+     *
+     * @param facultyNumber faculty number of the student to advance
+     * @throws StudentException if the student is not active
+     * @throws StudentException if the student is already in the final year
+     * @throws StudentException if the student has more than 2 failed mandatory exams
+     */
     public void advance(String facultyNumber) {
         Student student = getActiveStudent(facultyNumber);
         SystemData db = fileManager.getSystemData();
@@ -57,6 +96,25 @@ public class StudentService {
         System.out.println("Student " + facultyNumber + " has advanced to year " + student.getYear() + ".");
     }
 
+    /**
+     * Changes one of the student's attributes: specialty (program), study group,
+     * or year of study.
+     *
+     * <ul>
+     *   <li><b>group</b> — always allowed for active students.</li>
+     *   <li><b>program</b> — allowed only if the student has passed all mandatory
+     *       disciplines from previous years of the new specialty.</li>
+     *   <li><b>year</b> — can only advance by one; subject to the same exam
+     *       pass requirement as {@link #advance(String)}.</li>
+     * </ul>
+     *
+     * @param facultyNumber faculty number of the student to modify
+     * @param option        attribute to change: {@code "program"}, {@code "group"}, or {@code "year"}
+     * @param value         new value for the attribute
+     * @throws StudentException if the student is not active
+     * @throws StudentException if a business rule for the selected option is violated
+     * @throws StudentException if {@code option} is not one of the three accepted values
+     */
     public void change(String facultyNumber, String option, String value) {
         Student student = getActiveStudent(facultyNumber);
         SystemData db = fileManager.getSystemData();
@@ -111,6 +169,15 @@ public class StudentService {
         }
     }
 
+    /**
+     * Marks the student as graduated, provided they have passed all enrolled
+     * disciplines and accumulated the required elective credits.
+     *
+     * @param facultyNumber faculty number of the student to graduate
+     * @throws StudentException if the student is not active
+     * @throws StudentException if any enrolled discipline has not been passed
+     * @throws StudentException if the student has not earned enough elective credits
+     */
     public void graduate(String facultyNumber) {
         Student student = getActiveStudent(facultyNumber);
         SystemData db = fileManager.getSystemData();
@@ -134,12 +201,28 @@ public class StudentService {
         System.out.println("Student " + facultyNumber + " has been marked as graduated.");
     }
 
+    /**
+     * Marks the student as interrupted. An interrupted student cannot enrol in
+     * disciplines, sit exams, or change their program, group, or year until
+     * {@link #resume(String)} is called.
+     *
+     * @param facultyNumber faculty number of the student to interrupt
+     * @throws StudentException if the student is not active
+     */
     public void interrupt(String facultyNumber) {
         Student student = getActiveStudent(facultyNumber);
         student.setStatus(StudentStatus.INTERRUPTED);
         System.out.println("Student " + facultyNumber + " has been marked as interrupted.");
     }
 
+    /**
+     * Restores the enrolment rights of a previously interrupted student,
+     * setting their status back to {@link StudentStatus#ENROLLED}.
+     *
+     * @param facultyNumber faculty number of the student to resume
+     * @throws StudentException if the student does not exist
+     * @throws StudentException if the student is not currently interrupted
+     */
     public void resume(String facultyNumber) {
         Student student = getStudentByFn(facultyNumber);
         if (student.getStatus() != StudentStatus.INTERRUPTED) {
@@ -149,6 +232,18 @@ public class StudentService {
         System.out.println("Rights of student " + facultyNumber + " have been restored.");
     }
 
+    /**
+     * Enrols the student in a discipline, creating an ungraded record.
+     * The discipline must exist in the student's specialty and be available
+     * for their current year of study.
+     *
+     * @param facultyNumber faculty number of the student
+     * @param courseName    name of the discipline to enrol in
+     * @throws StudentException if the student is not active
+     * @throws StudentException if the discipline does not exist in the student's specialty
+     * @throws StudentException if the discipline is not available in the student's current year
+     * @throws StudentException if the student is already enrolled in that discipline
+     */
     public void enrollIn(String facultyNumber, String courseName) {
         Student student = getActiveStudent(facultyNumber);
         SystemData db = fileManager.getSystemData();
@@ -187,6 +282,18 @@ public class StudentService {
         System.out.println("Student " + facultyNumber + " has been enrolled in discipline '" + courseName + "'.");
     }
 
+    /**
+     * Records a grade for the student in the given discipline.
+     * The student must already be enrolled in the discipline, and the grade
+     * value must be in the range [2.00, 6.00].
+     *
+     * @param facultyNumber faculty number of the student
+     * @param courseName    name of the discipline
+     * @param gradeValue    numeric grade between 2.00 and 6.00
+     * @throws StudentException if the student is not active
+     * @throws StudentException if the grade value is outside the allowed range
+     * @throws StudentException if the student is not enrolled in that discipline
+     */
     public void addGrade(String facultyNumber, String courseName, double gradeValue) {
         Student student = getActiveStudent(facultyNumber);
 
@@ -203,6 +310,13 @@ public class StudentService {
         System.out.println("Added grade " + gradeValue + " for '" + courseName + "' to student " + facultyNumber + ".");
     }
 
+    /**
+     * Prints a short summary of the student's personal data and current GPA
+     * to standard output.
+     *
+     * @param facultyNumber faculty number of the student to print
+     * @throws StudentException if the student does not exist
+     */
     public void print(String facultyNumber) {
         Student s = getStudentByFn(facultyNumber);
         System.out.println("Faculty number : " + s.getFacultyNumber());
@@ -214,6 +328,14 @@ public class StudentService {
         System.out.println("GPA            : " + s.calculateAverage(true));
     }
 
+    /**
+     * Prints a list of all students in the given specialty and year to
+     * standard output.
+     *
+     * @param program name of the specialty
+     * @param year    study year to filter by
+     * @throws StudentException if the specialty does not exist
+     */
     public void printAll(String program, int year) {
         SystemData db = fileManager.getSystemData();
         Specialty specialty = db.findSpecialty(program);
@@ -238,6 +360,13 @@ public class StudentService {
         }
     }
 
+    /**
+     * Prints an exam protocol for the given discipline — one section per
+     * specialty and year that offers the discipline. Within each section,
+     * students are listed in ascending faculty-number order.
+     *
+     * @param courseName name of the discipline
+     */
     public void protocol(String courseName) {
         SystemData db = fileManager.getSystemData();
 
@@ -276,6 +405,14 @@ public class StudentService {
         }
     }
 
+    /**
+     * Prints a full academic transcript for the given student, including
+     * passed exams, ungraded disciplines, both GPA variants, and elective
+     * credit progress (if the specialty has a credit requirement).
+     *
+     * @param facultyNumber faculty number of the student
+     * @throws StudentException if the student does not exist
+     */
     public void report(String facultyNumber) {
         Student s = getStudentByFn(facultyNumber);
         SystemData db = fileManager.getSystemData();
@@ -317,6 +454,14 @@ public class StudentService {
         }
     }
 
+    /**
+     * Returns the student with the given faculty number, asserting that they
+     * are currently active (status {@link StudentStatus#ENROLLED}).
+     *
+     * @param facultyNumber faculty number to look up
+     * @return the active student
+     * @throws StudentException if the student does not exist or is not active
+     */
     private Student getActiveStudent(String facultyNumber) {
         Student student = getStudentByFn(facultyNumber);
         if (!student.isActive()) {
@@ -325,6 +470,13 @@ public class StudentService {
         return student;
     }
 
+    /**
+     * Returns the student with the given faculty number.
+     *
+     * @param facultyNumber faculty number to look up
+     * @return the student
+     * @throws StudentException if no student with that faculty number exists
+     */
     private Student getStudentByFn(String facultyNumber) {
         SystemData db = fileManager.getSystemData();
         Student student = db.findStudent(facultyNumber);
@@ -334,6 +486,13 @@ public class StudentService {
         return student;
     }
 
+    /**
+     * Parses a year value from a string.
+     *
+     * @param value string representation of the year
+     * @return parsed integer year
+     * @throws StudentException if the string is not a valid integer
+     */
     private int parseYear(String value) {
         try {
             return Integer.parseInt(value);
@@ -342,6 +501,14 @@ public class StudentService {
         }
     }
 
+    /**
+     * Calculates the total ECTS credits the student has earned from passed
+     * elective disciplines in their specialty.
+     *
+     * @param student   student whose credits to calculate
+     * @param specialty the student's specialty (used to look up discipline metadata)
+     * @return total elective credits earned
+     */
     private int calculateElectiveCredits(Student student, Specialty specialty) {
         int total = 0;
         for (Grade g : student.getPassedGrades()) {

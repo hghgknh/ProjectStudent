@@ -4,7 +4,21 @@ import studentsystem.service.FileManager;
 import studentsystem.service.StudentService;
 import java.util.Scanner;
 
+/**
+ * Entry point for the Student Information System.
+ *
+ * <p>Initialises the application components and runs the main input loop,
+ * which reads lines from standard input, parses them into command tokens,
+ * and dispatches them to the {@link CommandHandler} until the user types
+ * {@code exit}.</p>
+ */
 public class Main {
+
+    /**
+     * Starts the application.
+     *
+     * @param args command-line arguments (not used)
+     */
     public static void main(String[] args) {
         FileManager fileManager = new FileManager();
         StudentService studentService = new StudentService(fileManager);
