@@ -55,7 +55,7 @@ public class StudentService {
             throw new StudentException("Specialty '" + program + "' does not exist.");
         }
 
-        Student student = new Student(facultyNumber, name, program, group, 1);
+        Student student = new Student(facultyNumber, name, specialty, group, 1);
         db.addStudent(student);
         System.out.println("Student " + name + " successfully enrolled in specialty " + program + ", group " + group + ".");
     }
@@ -72,8 +72,7 @@ public class StudentService {
      */
     public void advance(String facultyNumber) {
         Student student = getActiveStudent(facultyNumber);
-        SystemData db = fileManager.getSystemData();
-        Specialty specialty = db.findSpecialty(student.getProgram());
+        Specialty specialty = student.getSpecialty();
 
         if (student.getYear() >= specialty.getTotalYears()) {
             throw new StudentException("The student is already in the final year.");
@@ -139,13 +138,13 @@ public class StudentService {
                         }
                     }
                 }
-                student.setProgram(value);
+                student.setSpecialty(newSpecialty);
                 System.out.println("Specialty of student " + facultyNumber + " changed to " + value + ".");
                 break;
 
             case "year":
                 int newYear = parseYear(value);
-                Specialty specialty = db.findSpecialty(student.getProgram());
+                Specialty specialty = student.getSpecialty();
                 if (newYear > student.getYear() + 1 || newYear < student.getYear()) {
                     throw new StudentException("Can only advance to the next year.");
                 }
@@ -180,8 +179,7 @@ public class StudentService {
      */
     public void graduate(String facultyNumber) {
         Student student = getActiveStudent(facultyNumber);
-        SystemData db = fileManager.getSystemData();
-        Specialty specialty = db.findSpecialty(student.getProgram());
+        Specialty specialty = student.getSpecialty();
 
         for (Grade g : student.getGrades()) {
             if (!g.isPassed()) {
@@ -189,8 +187,8 @@ public class StudentService {
             }
         }
 
-        if (specialty != null && specialty.getMinElectiveCredits() > 0) {
-            int earned = calculateElectiveCredits(student, specialty);
+        if (specialty.getMinElectiveCredits() > 0) {
+            int earned = calculateElectiveCredits(student);
             if (earned < specialty.getMinElectiveCredits()) {
                 throw new StudentException("Insufficient elective credits. Required: "
                         + specialty.getMinElectiveCredits() + ", earned: " + earned + ".");
@@ -246,12 +244,7 @@ public class StudentService {
      */
     public void enrollIn(String facultyNumber, String courseName) {
         Student student = getActiveStudent(facultyNumber);
-        SystemData db = fileManager.getSystemData();
-        Specialty specialty = db.findSpecialty(student.getProgram());
-
-        if (specialty == null) {
-            throw new StudentException("Student's specialty not found.");
-        }
+        Specialty specialty = student.getSpecialty();
 
         Discipline discipline = specialty.findDiscipline(courseName);
         if (discipline == null) {
@@ -278,7 +271,7 @@ public class StudentService {
             throw new StudentException("Student is already enrolled in discipline '" + courseName + "'.");
         }
 
-        student.addGrade(new Grade(courseName));
+        student.addGrade(new Grade(discipline));
         System.out.println("Student " + facultyNumber + " has been enrolled in discipline '" + courseName + "'.");
     }
 
@@ -355,9 +348,7 @@ public class StudentService {
             }
         }
 
-        if (!found) {
-            System.out.println("No students found.");
-        }
+        if (!found) System.out.println("No students found.");
     }
 
     /**
@@ -386,7 +377,7 @@ public class StudentService {
                 System.out.println("--------------------------------------------------");
 
                 List<Student> enrolled = db.getStudents().stream()
-                        .filter(s -> s.getProgram().equalsIgnoreCase(specialty.getName()))
+                        .filter(s -> s.getSpecialty() == specialty)
                         .filter(s -> s.findGrade(courseName) != null)
                         .sorted(Comparator.comparing(Student::getFacultyNumber))
                         .collect(Collectors.toList());
@@ -415,14 +406,13 @@ public class StudentService {
      */
     public void report(String facultyNumber) {
         Student s = getStudentByFn(facultyNumber);
-        SystemData db = fileManager.getSystemData();
-        Specialty specialty = db.findSpecialty(s.getProgram());
+        Specialty specialty = s.getSpecialty();
 
         System.out.println("Academic report for: " + s.getName() + " (" + s.getFacultyNumber() + ")");
         System.out.println("Specialty: " + s.getProgram() + " | Year: " + s.getYear() + " | Group: " + s.getGroup());
         System.out.println("==================================================");
 
-        List<Grade> passed = s.getPassedGrades();
+        List<Grade> passed   = s.getPassedGrades();
         List<Grade> ungraded = s.getUngradedGrades();
 
         if (!passed.isEmpty()) {
@@ -443,8 +433,8 @@ public class StudentService {
         System.out.printf("GPA (with incomplete) : %.2f%n", s.calculateAverage(true));
         System.out.printf("GPA (passed only)     : %.2f%n", s.calculateAverage(false));
 
-        if (specialty != null && specialty.getMinElectiveCredits() > 0) {
-            int earned = calculateElectiveCredits(s, specialty);
+        if (specialty.getMinElectiveCredits() > 0) {
+            int earned    = calculateElectiveCredits(s);
             int remaining = Math.max(0, specialty.getMinElectiveCredits() - earned);
             System.out.println("--------------------------------------------------");
             System.out.println("Elective discipline credits:");
@@ -505,15 +495,14 @@ public class StudentService {
      * Calculates the total ECTS credits the student has earned from passed
      * elective disciplines in their specialty.
      *
-     * @param student   student whose credits to calculate
-     * @param specialty the student's specialty (used to look up discipline metadata)
+     * @param student student whose credits to calculate
      * @return total elective credits earned
      */
-    private int calculateElectiveCredits(Student student, Specialty specialty) {
+    private int calculateElectiveCredits(Student student) {
         int total = 0;
         for (Grade g : student.getPassedGrades()) {
-            Discipline d = specialty.findDiscipline(g.getDisciplineName());
-            if (d != null && d.isElective()) {
+            Discipline d = g.getDiscipline();
+            if (d.isElective()) {
                 total += d.getCredits();
             }
         }

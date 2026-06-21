@@ -18,8 +18,8 @@ public class Grade {
     /** The grade value automatically assigned to ungraded disciplines when computing GPA. */
     public static final double FAIL_GRADE = 2.0;
 
-    /** Name of the discipline this grade belongs to. */
-    private String disciplineName;
+    /** The discipline this grade belongs to. */
+    private Discipline discipline;
 
     /**
      * Numeric grade value in the range [2.00, 6.00].
@@ -30,21 +30,39 @@ public class Grade {
     /**
      * Constructs a grade with a known value.
      *
-     * @param disciplineName name of the discipline
-     * @param value          numeric grade (2.00–6.00), or 0 if not yet graded
+     * @param discipline the discipline this grade belongs to
+     * @param value      numeric grade (2.00–6.00), or 0 if not yet graded
      */
-    public Grade(String disciplineName, double value) {
-        this.disciplineName = disciplineName;
+    public Grade(Discipline discipline, double value) {
+        this.discipline = discipline;
         this.value = value;
     }
 
     /**
      * Constructs a grade with no value (student enrolled but not yet graded).
      *
-     * @param disciplineName name of the discipline
+     * @param discipline the discipline this grade belongs to
      */
-    public Grade(String disciplineName) {
-        this(disciplineName, 0);
+    public Grade(Discipline discipline) {
+        this(discipline, 0);
+    }
+
+    /**
+     * Returns the discipline this grade belongs to.
+     *
+     * @return the {@link Discipline} object
+     */
+    public Discipline getDiscipline() {
+        return discipline;
+    }
+
+    /**
+     * Sets the discipline this grade belongs to.
+     *
+     * @param discipline new discipline
+     */
+    public void setDiscipline(Discipline discipline) {
+        this.discipline = discipline;
     }
 
     /**
@@ -52,14 +70,9 @@ public class Grade {
      *
      * @return discipline name
      */
-    public String getDisciplineName() { return disciplineName; }
-
-    /**
-     * Sets the name of the discipline this grade belongs to.
-     *
-     * @param name new discipline name
-     */
-    public void setDisciplineName(String name) { this.disciplineName = name; }
+    public String getDisciplineName() {
+        return discipline.getName();
+    }
 
     /**
      * Returns the numeric grade value, or 0 if the exam has not been sat yet.
@@ -104,7 +117,7 @@ public class Grade {
      */
     @Override
     public String toString() {
-        if (!hasGrade()) return disciplineName + ": (no grade)";
-        return disciplineName + ": " + value;
+        if (!hasGrade()) return discipline.getName() + ": (no grade)";
+        return discipline.getName() + ": " + value;
     }
 }

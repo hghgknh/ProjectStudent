@@ -129,9 +129,11 @@ public class XmlParser {
 
             Specialty specialty = new Specialty(name, totalYears, minCredits);
 
-            NodeList yearNodes = el.getElementsByTagName("year");
+            NodeList yearNodes = el.getChildNodes();
             for (int j = 0; j < yearNodes.getLength(); j++) {
+                if (yearNodes.item(j).getNodeType() != Node.ELEMENT_NODE) continue;
                 Element yearEl = (Element) yearNodes.item(j);
+                if (!yearEl.getTagName().equals("year")) continue;
                 int yearNum = Integer.parseInt(yearEl.getAttribute("number"));
 
                 NodeList disciplines = yearEl.getElementsByTagName("discipline");
@@ -163,26 +165,41 @@ public class XmlParser {
      *
      * @param doc  parsed XML document
      * @param db   data store to populate
+     * @throws FileException if a referenced specialty or discipline is not found
      */
     private void parseStudents(Document doc, SystemData db) {
         NodeList studentNodes = doc.getElementsByTagName("student");
         for (int i = 0; i < studentNodes.getLength(); i++) {
             Element el = (Element) studentNodes.item(i);
-            String fn = el.getAttribute("facultyNumber");
-            String name = el.getAttribute("name");
-            String program = el.getAttribute("program");
-            String group = el.getAttribute("group");
-            int year = Integer.parseInt(el.getAttribute("year"));
+            String fn           = el.getAttribute("facultyNumber");
+            String name         = el.getAttribute("name");
+            String programName  = el.getAttribute("program");
+            String group        = el.getAttribute("group");
+            int year            = Integer.parseInt(el.getAttribute("year"));
             StudentStatus status = StudentStatus.valueOf(el.getAttribute("status"));
 
-            Student student = new Student(fn, name, program, group, year);
+            Specialty specialty = db.findSpecialty(programName);
+            if (specialty == null) {
+                throw new FileException(
+                        "Unknown specialty '" + programName + "' referenced by student " + fn + ".");
+            }
+
+            Student student = new Student(fn, name, specialty, group, year);
             student.setStatus(status);
 
             NodeList gradeNodes = el.getElementsByTagName("grade");
             for (int j = 0; j < gradeNodes.getLength(); j++) {
                 Element gEl = (Element) gradeNodes.item(j);
-                String discipline = gEl.getAttribute("discipline");
+                String disciplineName = gEl.getAttribute("discipline");
                 double value = Double.parseDouble(gEl.getAttribute("value"));
+
+                Discipline discipline = specialty.findDiscipline(disciplineName);
+                if (discipline == null) {
+                    throw new FileException(
+                            "Unknown discipline '" + disciplineName
+                                    + "' in student " + fn + " (specialty: " + programName + ").");
+                }
+
                 student.addGrade(new Grade(discipline, value));
             }
             db.addStudent(student);

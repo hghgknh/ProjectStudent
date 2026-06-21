@@ -7,7 +7,7 @@ import java.util.List;
  * Represents a student enrolled at the university.
  *
  * <p>Each student is identified by a unique faculty number and belongs to a
- * specialty, a study group, and a current year. The student accumulates
+ * {@link Specialty}, a study group, and a current year. The student accumulates
  * {@link Grade} records — one per discipline they enrol in — and their status
  * reflects whether they are actively studying, have interrupted, or have
  * graduated.</p>
@@ -20,8 +20,8 @@ public class Student {
     /** Full name of the student. */
     private String name;
 
-    /** Name of the specialty (program) the student is enrolled in. */
-    private String program;
+    /** The specialty (program) the student is enrolled in. */
+    private Specialty specialty;
 
     /** Study group identifier within the specialty. */
     private String group;
@@ -44,14 +44,14 @@ public class Student {
      *
      * @param facultyNumber unique faculty number
      * @param name          full name
-     * @param program       specialty name
+     * @param specialty     the specialty the student is enrolled in
      * @param group         study group identifier
      * @param year          current year of study
      */
-    public Student(String facultyNumber, String name, String program, String group, int year) {
+    public Student(String facultyNumber, String name, Specialty specialty, String group, int year) {
         this.facultyNumber = facultyNumber;
         this.name = name;
-        this.program = program;
+        this.specialty = specialty;
         this.group = group;
         this.year = year;
         this.status = StudentStatus.ENROLLED;
@@ -63,135 +63,112 @@ public class Student {
      *
      * @return faculty number
      */
-    public String getFacultyNumber() {
-        return facultyNumber;
-    }
+    public String getFacultyNumber() { return facultyNumber; }
 
     /**
      * Sets the student's faculty number.
      *
      * @param facultyNumber new faculty number
      */
-    public void setFacultyNumber(String facultyNumber) {
-        this.facultyNumber = facultyNumber;
-    }
+    public void setFacultyNumber(String facultyNumber) { this.facultyNumber = facultyNumber; }
 
     /**
      * Returns the student's full name.
      *
      * @return full name
      */
-    public String getName() {
-        return name;
-    }
+    public String getName() { return name; }
 
     /**
      * Sets the student's full name.
      *
      * @param name new full name
      */
-    public void setName(String name) {
-        this.name = name;
-    }
+    public void setName(String name) { this.name = name; }
+
+    /**
+     * Returns the specialty the student is enrolled in.
+     *
+     * @return {@link Specialty} object
+     */
+    public Specialty getSpecialty() { return specialty; }
+
+    /**
+     * Sets the specialty the student is enrolled in.
+     *
+     * @param specialty new specialty
+     */
+    public void setSpecialty(Specialty specialty) { this.specialty = specialty; }
 
     /**
      * Returns the name of the specialty the student is enrolled in.
      *
      * @return specialty name
      */
-    public String getProgram() {
-        return program;
-    }
-
-    /**
-     * Sets the specialty the student is enrolled in.
-     *
-     * @param program new specialty name
-     */
-    public void setProgram(String program) {
-        this.program = program;
-    }
+    public String getProgram() { return specialty.getName(); }
 
     /**
      * Returns the student's study group identifier.
      *
      * @return group identifier
      */
-    public String getGroup() {
-        return group;
-    }
+    public String getGroup() { return group; }
 
     /**
      * Sets the student's study group identifier.
      *
      * @param group new group identifier
      */
-    public void setGroup(String group) {
-        this.group = group;
-    }
+    public void setGroup(String group) { this.group = group; }
 
     /**
      * Returns the student's current year of study.
      *
      * @return year (1-based)
      */
-    public int getYear() {
-        return year;
-    }
+    public int getYear() { return year; }
 
     /**
      * Sets the student's current year of study.
      *
      * @param year new year (1-based)
      */
-    public void setYear(int year) {
-        this.year = year;
-    }
+    public void setYear(int year) { this.year = year; }
 
     /**
      * Returns the student's current enrolment status.
      *
      * @return {@link StudentStatus}
      */
-    public StudentStatus getStatus() {
-        return status;
-    }
+    public StudentStatus getStatus() { return status; }
 
     /**
      * Sets the student's enrolment status.
      *
      * @param status new status
      */
-    public void setStatus(StudentStatus status) {
-        this.status = status;
-    }
+    public void setStatus(StudentStatus status) { this.status = status; }
 
     /**
      * Returns the full list of grades (enrolled disciplines) for this student.
      *
      * @return mutable list of grades
      */
-    public List<Grade> getGrades() {
-        return grades;
-    }
+    public List<Grade> getGrades() { return grades; }
 
     /**
      * Replaces the full list of grades for this student.
      *
      * @param grades new list of grades
      */
-    public void setGrades(List<Grade> grades) {
-        this.grades = grades;
-    }
+    public void setGrades(List<Grade> grades) { this.grades = grades; }
 
     /**
      * Adds a grade entry to this student's record.
      *
      * @param grade grade to add
      */
-    public void addGrade(Grade grade) {
-        grades.add(grade);
-    }
+    public void addGrade(Grade grade) { grades.add(grade); }
 
     /**
      * Finds and returns the grade for the given discipline name,
@@ -293,6 +270,8 @@ public class Student {
      */
     @Override
     public String toString() {
-        return facultyNumber + " - " + name + " [" + program + ", gr." + group + ", year " + year + ", " + status + "]";
+        return facultyNumber + " - " + name
+                + " [" + specialty.getName() + ", gr." + group
+                + ", year " + year + ", " + status + "]";
     }
 }
